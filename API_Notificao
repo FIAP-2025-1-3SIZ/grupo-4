@@ -1,0 +1,215 @@
+openapi: 3.0.1
+info:
+  title: Gerenciamento de Notificações
+  description: |-
+    API para criar, enviar e consultar o status de notificações para usuários, 
+    conforme proposto no Exercício 4.
+  version: 1.0.0
+servers:
+  - url: https://api.example.com/v1
+    description: Servidor de Produção
+
+tags:
+  - name: Notificações
+    description: Operações relacionadas ao envio e controle de notificações
+
+paths:
+  /notificacoes:
+    post:
+      tags:
+        - Notificações
+      summary: Cria e envia uma nova notificação
+      description: |-
+        Cria e dispara uma nova notificação para um destinatário. 
+        O tipo da notificação (`tipo`) define o conteúdo esperado no objeto `dados`.
+      requestBody:
+        description: Objeto da notificação a ser criada.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NovaNotificacao'
+            examples:
+              ConfirmacaoDeCompra:
+                summary: Exemplo de notificação de confirmação de compra
+                value:
+                  tipo: "CONFIRMACAO_COMPRA"
+                  destinatario:
+                    userId: "usr_12345"
+                    email: "cliente@email.com"
+                    telefone: "+5511999998888"
+                  dados:
+                    pedidoId: "ped_ABCDE"
+                    valorTotal: 99.90
+                    itens:
+                      - nome: "Livro sobre APIs"
+                        quantidade: 1
+                      - nome: "Caneca Dev"
+                        quantidade: 2
+              EmissaoNotaFiscal:
+                summary: Exemplo de notificação de nota fiscal
+                value:
+                  tipo: "EMISSAO_NOTA_FISCAL"
+                  destinatario:
+                    userId: "usr_12345"
+                    email: "cliente@email.com"
+                  dados:
+                    pedidoId: "ped_ABCDE"
+                    numeroNota: "NFe-54321"
+                    urlDanfe": "https://site.com/danfe/54321.pdf"
+              PedidoEmRota:
+                summary: Exemplo de notificação de pedido em rota
+                value:
+                  tipo: "PEDIDO_EM_ROTA"
+                  destinatario:
+                    userId: "usr_12345"
+                    email: "cliente@email.com"
+                    telefone: "+5511987654321"
+                  dados:
+                    pedidoId: "ped_ABCDE"
+                    transportadora: "LogiFast"
+                    codigoRastreio: "BR123456789BR"
+                    urlRastreio: "https://logifast.com/track/BR123456789BR"
+      responses:
+        '201':
+          description: Notificação criada e enviada com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificacaoCriadaResponse'
+        '400':
+          description: Erro na requisição (dados inválidos ou faltando)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+              example:
+                erro: "Dados inválidos"
+                mensagem: "O campo 'tipo' é obrigatório e não pode ser nulo."
+
+  /notificacoes/{id}:
+    get:
+      tags:
+        - Notificações
+      summary: Consulta uma notificação específica
+      description: Recupera os detalhes e o status de uma notificação usando seu ID.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: O ID da notificação a ser consultada.
+          schema:
+            type: string
+          example: "notif_zYxWvU"
+      responses:
+        '200':
+          description: Sucesso. Retorna os dados da notificação.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notificacao'
+        '404':
+          description: Notificação não encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+              example:
+                erro: "Não encontrado"
+                mensagem: "Nenhuma notificação encontrada com o ID notif_zYxWvU."
+
+components:
+  schemas:
+    NovaNotificacao:
+      type: object
+      required:
+        - tipo
+        - destinatario
+        - dados
+      properties:
+        tipo:
+          type: string
+          description: Define o tipo e o propósito da notificação.
+          enum:
+            - CONFIRMACAO_COMPRA
+            - EMISSAO_NOTA_FISCAL
+            - PEDIDO_EM_PREPARACAO
+            - PEDIDO_EM_ROTA
+            - PEDIDO_CONCLUIDO
+        destinatario:
+          $ref: '#/components/schemas/Destinatario'
+        dados:
+          type: object
+          description: Payload com os dados específicos para cada tipo de notificação.
+    
+    Destinatario:
+      type: object
+      required:
+        - userId
+      properties:
+        userId:
+          type: string
+          description: ID do usuário que receberá a notificação.
+          example: "usr_12345"
+        email:
+          type: string
+          format: email
+          description: E-mail do destinatário.
+          example: "cliente@email.com"
+        telefone:
+          type: string
+          description: Telefone do destinatário para envio de SMS.
+          example: "+5511999998888"
+
+    Notificacao:
+      type: object
+      properties:
+        notificacaoId:
+          type: string
+          description: ID único da notificação.
+          example: "notif_zYxWvU"
+        status:
+          type: string
+          description: Status atual da notificação.
+          example: "ENVIADA"
+        tipo:
+          type: string
+          description: Tipo da notificação enviada.
+          example: "CONFIRMACAO_COMPRA"
+        destinatario:
+          $ref: '#/components/schemas/Destinatario'
+        timestamp:
+          type: string
+          format: date-time
+          description: Data e hora de quando a notificação foi criada.
+          example: "2025-08-21T20:45:00Z"
+          
+    NotificacaoCriadaResponse:
+      type: object
+      properties:
+        notificacaoId:
+          type: string
+          description: ID único da notificação gerada.
+          example: "notif_zYxWvU"
+        status:
+          type: string
+          description: Status inicial da notificação.
+          example: "ENVIADA"
+        tipo:
+          type: string
+          example: "CONFIRMACAO_COMPRA"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-08-21T20:45:00Z"
+
+    Erro:
+      type: object
+      properties:
+        erro:
+          type: string
+          description: Um título curto para o erro.
+        mensagem:
+          type: string
+          description: Uma mensagem clara explicando o que deu errado.
+
